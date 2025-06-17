@@ -16,7 +16,7 @@ const nunito = Nunito({
   weight: ["400", "600", "700"], // pilih sesuai kebutuhan
 });
 export const metadata = {
-  title: "GWK",
+  title: "Global Wujud Kreasi",
   description: "Konsultasikan Proyekmu!",
 };
 

@@ -2,6 +2,9 @@
 import Timeline from "./timeline";
 import Navbar from "./navbar";
 import Jumbotron from "./jumbotron";
+import Option from "./option";
+import Pricing from "./pricing";
+import FAQ from "./faq";
 
 export default function HomePage() {
   return (
@@ -38,6 +41,9 @@ export default function HomePage() {
         <main className="relative z-20">
           <Jumbotron />
           <Timeline />
+          <Option />
+          <Pricing />
+          <FAQ />
         </main>
       </div>
     </div>
