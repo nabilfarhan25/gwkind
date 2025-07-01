@@ -3,21 +3,23 @@
 import React from "react";
 import { useState } from "react";
 import {
-  Code,
-  Palette,
-  Smartphone,
-  Zap,
-  CheckCircle,
-  FileText,
   ClipboardCheck,
   DraftingCompass,
   LayoutTemplate,
   PencilRuler,
   Check,
+  ArrowRight,
 } from "lucide-react";
 
 export default function ServicesSection() {
   const [selectedService, setSelectedService] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [cupon, setCupon] = useState("");
+  const [note, setNote] = useState("");
+
+  const [isSending, setIsSending] = useState(false);
 
   const services = [
     {
@@ -90,15 +92,57 @@ export default function ServicesSection() {
     setSelectedService(serviceId);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (selectedService) {
-      console.log("Selected service:", selectedService);
-      const selected = services.find((s) => s.id === selectedService);
-      alert(`You selected: ${selected ? selected.title : "Unknown service"}`);
-    } else {
-      alert("Please select a service");
+  const handleConfirmSend = async () => {
+    if (!name || !email) {
+      alert("Nama dan email wajib diisi");
+      return;
     }
+
+    const selected = services.find((s) => s.id === selectedService);
+
+    if (isSending) return; // ⛔ cegah klik ulang
+    setIsSending(true); // ✅ set langsung
+
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: "wahyunabillafarhan25@gmail.com",
+          subject: `Permintaan Layanan Oleh: ${name}`,
+          text: `Nama: ${name}\nEmail: ${email}\nCupon: ${cupon}\nNote from Client: ${note}\n\nKlien memilih layanan:\n${selected.title}\n\nDeskripsi:\n${selected.longDescription}\n`,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Gagal mengirim:", result.message);
+        alert("Gagal mengirim email");
+      } else {
+        alert("Email berhasil dikirim");
+        setShowModal(false);
+        setName("");
+        setEmail("");
+        setCupon("");
+        setNote("");
+        setSelectedService(null);
+      }
+    } catch (error) {
+      console.error("Error saat mengirim:", error);
+      alert("Terjadi kesalahan saat mengirim email");
+    } finally {
+      setIsSending(false); // ✅ Selesai loading
+    }
+  };
+
+  const handleCancelSend = () => {
+    setShowModal(false);
+  };
+
+  const handleModalSubmit = (e) => {
+    e.preventDefault(); // ⛔ blokir submit bawaan
+    handleConfirmSend(); // ✅ eksekusi hanya sekali
   };
 
   return (
@@ -123,7 +167,13 @@ export default function ServicesSection() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setShowModal(true); // bukan handleSubmit
+          }}
+          className="space-y-8"
+        >
           {/* Services Flex Container */}
           <div className="group/container flex flex-col lg:flex-row gap-4 lg:gap-2 lg:h-96">
             {services.map((service) => {
@@ -170,6 +220,7 @@ export default function ServicesSection() {
 
                     {/* Hidden Radio Input */}
                     <input
+                      disabled={isSending}
                       type="radio"
                       name="service"
                       value={service.id}
@@ -275,7 +326,7 @@ export default function ServicesSection() {
                 transition-all duration-300 transform
                 ${
                   selectedService
-                    ? "bg-gradient-to-r from-white to-gray-200 text-black shadow-2xl hover:shadow-3xl hover:scale-105 hover:from-gray-100 hover:to-white"
+                    ? "bg-gradient-to-r cursor-pointer from-white to-gray-200 text-black shadow-2xl hover:shadow-3xl hover:scale-105 hover:from-gray-100 hover:to-white"
                     : "bg-gray-800 text-gray-500 cursor-not-allowed"
                 }
               `}
@@ -306,6 +357,122 @@ export default function ServicesSection() {
           </div>
         </form>
       </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 mx-3">
+            <h2 className="text-xl font-bold mb-4">
+              Konfirmasi Permintaan Layanan
+            </h2>
+            <p className=" text-sm">Anda memilih layanan: </p>
+            <h4 className="mb-4 text-xl font-bold text-pink-700">
+              {services.find((s) => s.id === selectedService)?.title}
+            </h4>
+
+            <form onSubmit={handleModalSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300">
+                  Nama <span className="text-red-600">*</span>
+                </label>
+                <input
+                  disabled={isSending}
+                  type="text"
+                  className="mt-1 block w-full px-4 py-2 border rounded-lg border-gray-300 focus:outline-none focus:ring focus:ring-red-600 focus:border-pink-700"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300">
+                  Email <span className="text-red-600">*</span>
+                </label>
+                <input
+                  disabled={isSending}
+                  type="email"
+                  className="mt-1 block w-full px-4 py-2 border rounded-lg border-gray-300 focus:outline-none focus:ring focus:ring-red-600 focus:border-pink-700"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300">
+                  Note
+                </label>
+                <textarea
+                  disabled={isSending}
+                  rows={4}
+                  className="mt-1 block w-full px-4 py-2 border rounded-lg border-gray-300 focus:outline-none focus:ring focus:ring-red-600 focus:border-pink-700 resize-none"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300">
+                  Have Cupon Code?
+                </label>
+                <input
+                  disabled={isSending}
+                  type="text"
+                  className="mt-1 block w-full px-4 py-2 border rounded-lg border-gray-300 focus:outline-none focus:ring focus:ring-red-600 focus:border-pink-700"
+                  value={cupon}
+                  onChange={(e) => setCupon(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCancelSend}
+                  className="cursor-pointer nline-flex items-center gap-2 bg-white/10 hover:bg-white/5 backdrop-blur-sm border border-white/20 rounded-full px-8 py-2"
+                >
+                  Batal
+                </button>
+
+                <button
+                  disabled={isSending}
+                  type="submit"
+                  className="group relative inline-flex items-center space-x-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  {isSending ? (
+                    <div className="cursor-progress flex items-center justify-center gap-2">
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l5-5-5-5v4a12 12 0 00-12 12h4z"
+                        ></path>
+                      </svg>
+                      <span>Mengirim...</span>
+                    </div>
+                  ) : (
+                    <div className="cursor-pointer flex items-center justify-center gap-2">
+                      <span>Konsultasi Sekarang</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
